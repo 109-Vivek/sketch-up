@@ -42,6 +42,10 @@ export default function Game({
   const [socket, setSocket] = useState<Socket | null>(null);
   const [players,setPlayers] = useState<Player[]>([]);
   const [wordChoices,setWordChoices] = useState<string[]>([]);
+  const [drawerName,setDrawerName] = useState<string>("");
+  const [word,setWord] = useState<string>("");
+  const [wordLength,setWordLength] = useState<number>(0); 
+  const [winners,setWinners]= useState<Player[]>([]);
 
   useEffect(() => {
     const skt = getSocket();
@@ -59,6 +63,7 @@ export default function Game({
       skt.on("room-created", (roomId: string) => {
         setRoomId(roomId);
       });
+     
     } else if (event === "join" && name) {
       // Handle room joining
       skt.emit("join-room", { name, roomId });
@@ -80,10 +85,31 @@ export default function Game({
         setPlayers(players);
     }
 
+    const showWordSelection = (drawer: string)=>{
+      setDrawerName(drawer);
+      setShow("word-selection");
+    }
+    const handleStartDrawing = (word:string)=>{
+      setWord(word)
+      setShow("draw-canvas");
+    }
+    const handleShowCanvas = ({wordLength}: {wordLength : number})=>{
+      setWordLength(wordLength)
+      setShow("canvas");
+    }
+    const handleShowWinners = ({winners}:{winners : Player[]})=>{
+      setWinners(winners);
+      setShow("winners");
+    }
+
     if (skt) {
       skt.on("choose-word", handleChooseWord);
       skt.on("error", handleError);
       skt.on("update-leaderboard",updateLeaderboard);
+      skt.on("word-selection",showWordSelection);
+      skt.on("start-drawing",handleStartDrawing)
+      skt.on("show-canvas",handleShowCanvas);
+      skt.on("winners",handleShowWinners);
     }
 
     const timer = setInterval(() => {
@@ -102,6 +128,10 @@ export default function Game({
       skt.off("choose-word", handleChooseWord);
       skt.off("room-created");
       skt.off("update-leaderboard",updateLeaderboard)
+      skt.off("word-selection",showWordSelection);
+      skt.off("start-drawing",handleStartDrawing);
+      skt.off("show-canvas",handleShowCanvas);
+      skt.off("winners",handleShowWinners)
     };
   }, [event, name, router]);
 
@@ -138,7 +168,7 @@ export default function Game({
 
       <div className="flex flex-1 p-4 gap-4 max-h-[calc(100vh-80px)]">
         <LeaderBoard players={players} />
-        <Outlet show={"settings"} wordChoices={wordChoices} />
+        <Outlet show={show} wordChoices={wordChoices} drawerName={drawerName} word={word} wordLength={wordLength} winners={winners} />
         <ChatBox messages={messages} />
       </div>
     </div>

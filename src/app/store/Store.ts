@@ -16,12 +16,9 @@ class Store {
 
   createRoom(host: Player) {
     const roomId = (this.globalRoomId++).toString();
-    console.log("Room Id's");
-    console.log(roomId);
-    console.log(this.globalRoomId);
     const room = new Room(roomId, host);
     this.store.set(roomId, room);
-    io.socketsJoin(roomId); // Create Socket.IO room , might remove later
+    io.socketsJoin(roomId); 
     return room;
   }
 

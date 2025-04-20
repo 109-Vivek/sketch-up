@@ -7,6 +7,7 @@ export class Player {
     socket : Socket;
     guessed : boolean = false;
     isDrawing : boolean = false;
+    isChoosingWord : boolean = false;
     guessTimestamp : number | null = null;
     roundScore : number = 0;
     

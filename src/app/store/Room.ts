@@ -16,9 +16,7 @@ export class Room {
   drawTime: number = 80;
   host: Player;
   players: Player[] = [];
-
   words: string[] = defaultWords;
-
   currRound: number = 1;
   currentWord: string = "";
   currentTurnIndex: number = 0;
@@ -138,14 +136,12 @@ export class Room {
     this.startWordSelection();
   }
 
-
   startWordSelection(){
     const drawer = this.players[this.currentTurnIndex];
-    drawer.isDrawing = true;
+    drawer.isChoosingWord = true;
     this.wordChoices = this.getThreeRandomWords();
-    drawer.socket.emit("choose-word", {
-      words: this.wordChoices,
-    });
+    io.to(this.id).except(drawer.id).emit('word-selection', drawer.name);
+    drawer.socket.emit("choose-word",this.wordChoices);
 
     this.wordSelectionTimer = setTimeout(() => {
       const randomWord =
@@ -156,30 +152,34 @@ export class Room {
     this.sendLeaderBoard();
   }
 
+  hasEveryoneGuessed(){
+    this.players.forEach((player)=>{
+      if(!player.guessed) return false;
+    })
+    return true;
+  }
+
 
   startDrawing(word: string) {
-    this.currentWord = word;
-    this.drawStartTime = Date.now();
-
     const drawer = this.players[this.currentTurnIndex];
+    drawer.isDrawing = true;
+    
+    this.currentWord = word;
+    this.drawStartTime = new Date().getTime();
     drawer.socket.emit("start-drawing", { word });
-
-    io.to(this.id).emit("round-started", {
-      drawer: drawer.name,
-      round: this.currRound,
-      totalRounds: this.rounds,
-    });
-
-    this.drawTimer = setTimeout(() => {
+    const dummy : string[] = [];
+    io.to(this.id).except(drawer.id).emit("show-canvas",{wordLength : this.currentWord.length })
+    this.drawTimer = setTimeout(()=>{
       this.endDrawingRound();
-    }, this.drawTime * 1000);
+    },this.drawTime*1000)
   }
 
   endDrawingRound() {
     this.calculateScore();
     this.pushRoundResults();
     this.sendLeaderBoard();
-    setTimeout(() => this.changeTurn(), 5000); // Short delay before next round
+    this.changeTurn();
+    this.startTurn();
   }
 
   calculateScore() {
@@ -204,7 +204,7 @@ export class Room {
     io.to(this.id).emit("round-result", { players: temp });
   }
 
-  pushResult() {
+  pushWinners() {
     const winners = [...this.players]
       .sort((a, b) => b.score - a.score)
       .slice(0, Math.min(3, this.players.length))
@@ -213,7 +213,7 @@ export class Room {
         name: player.name,
         score: player.score,
       }));
-    io.to(this.id).emit("result", { winners });
+    io.to(this.id).emit("winners", { winners });
   }
 
   resetDefaults() {
@@ -230,11 +230,11 @@ export class Room {
   }
 
   endGame() {
-    this.pushResult();
+    this.pushWinners();
     this.resetDefaults();
     clearTimeout(this.wordSelectionTimer!);
     clearTimeout(this.drawTimer!);
-    this.pushResult();
+    this.pushWinners();
   }
 
   sendLeaderBoard() {

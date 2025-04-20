@@ -20,7 +20,6 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     socket.on("create-room", ({ name }) => {
-      console.log("here at create -room",socket.id);
       const host = new Player(socket.id, name, socket);
       const room = store.createRoom(host);
       socket.join(room.id)
@@ -54,7 +53,10 @@ app.prepare().then(() => {
           message : "It's not your turn"
         })
       }
-      clearTimeout(room?.wordSelectionTimer)
+      if (room?.wordSelectionTimer) {
+        clearTimeout(room.wordSelectionTimer as NodeJS.Timeout);
+      }
+      room?.startDrawing(word);
     })
 
 
@@ -70,11 +72,23 @@ app.prepare().then(() => {
           color: "black",
         });
       } else {
+        if (player) {
+          player.guessed = true;
+        }
         io.to(`${room?.id}`).emit("message", {
           name: "",
           message: `${name} guessed the word`,
           color: "green",
         });
+        
+        //if everyone guessed the word then clear the drawTimer
+        if(room?.hasEveryoneGuessed)
+        {
+          if (room.drawTimer) {
+            clearTimeout(room.drawTimer);
+          }
+          room?.endDrawingRound();
+        }
       }
     });
 
