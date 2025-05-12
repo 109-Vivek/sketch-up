@@ -50,6 +50,6 @@ export default function App() {
   },[])
 
   if(home) return <Home name={name} setName={setName} roomId={roomId} setRoomId={setRoomId} setHome={setHome} setEvent={setEvent} />
-  else return <Game event={event} name={name} roomId={roomId} setHome={setHome} setRoomId={setRoomId} messages={messages} setMessages={setMessages}/>
+  else return <Game event={event} setEvent={setEvent} name={name} roomId={roomId} setHome={setHome} setRoomId={setRoomId} messages={messages} setMessages={setMessages}/>
 }
 

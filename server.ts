@@ -59,13 +59,19 @@ app.prepare().then(() => {
       room?.startDrawing(word);
     })
 
+    socket.on("draw",(data)=>{
+      const room = store.findRoomBySocketId(socket.id);
+      io.to(`${room?.id}`).emit("draw",data);
+    })
+
 
     socket.on("guess", ({ guess }) => {
       const room = store.findRoomBySocketId(socket.id);
       const player = room?.players.find(
         (player) => player.socket.id === socket.id
       );
-      if (player?.guessed || room?.currentWord !== guess) {
+      const drawer = room?.players[room.currentTurnIndex];
+      if (player === drawer || player?.guessed || room?.currentWord !== guess) {
         io.to(`${room?.id}`).emit("message", {
           name: player?.name,
           message: guess,
@@ -74,14 +80,14 @@ app.prepare().then(() => {
       } else {
         if (player) {
           player.guessed = true;
+          player.guessTimestamp = Date.now(); 
         }
         io.to(`${room?.id}`).emit("message", {
           name: "",
-          message: `${name} guessed the word`,
+          message: `${player?.name} guessed the word`,
           color: "green",
         });
         
-        //if everyone guessed the word then clear the drawTimer
         if(room?.hasEveryoneGuessed)
         {
           if (room.drawTimer) {

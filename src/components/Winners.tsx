@@ -6,7 +6,6 @@ export default function Winners({winners} : { winners : Player[]}){
                     <PlayerCard key={player.id} rank={index+1} player={player} />
                   ))}
     </div>)
-    return <div>Winners</div>
 }
 
 function PlayerCard({

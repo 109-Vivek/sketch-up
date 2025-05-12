@@ -21,6 +21,7 @@ interface GameProps {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   setRoomId: React.Dispatch<React.SetStateAction<string>>;
   setHome: React.Dispatch<React.SetStateAction<boolean>>;
+  setEvent: React.Dispatch<React.SetStateAction<string>>;
 }
 
 
@@ -32,6 +33,7 @@ export default function Game({
   messages,
   setMessages,
   setHome,
+  setEvent
 }: GameProps) {
 
   const router = useRouter();
@@ -46,6 +48,7 @@ export default function Game({
   const [word,setWord] = useState<string>("");
   const [wordLength,setWordLength] = useState<number>(0); 
   const [winners,setWinners]= useState<Player[]>([]);
+  const [roundResult,setRoundResult] = useState<{name : string,roundScore : number}[]>([]);
 
   useEffect(() => {
     const skt = getSocket();
@@ -67,10 +70,14 @@ export default function Game({
     } else if (event === "join" && name) {
       // Handle room joining
       skt.emit("join-room", { name, roomId });
-    } else {
-      toast.error("Invalid event or parameters");
-      router.push("/");
-    }
+      setEvent("nothing");
+    } 
+    // else {
+    //   toast.error("Invalid event or parameters");
+    //   console.log("here");
+    //   router.push("/");
+    //   console.log("here");
+    // }
 
     const handleError = (message: string) => {
       toast.error(message);
@@ -102,12 +109,18 @@ export default function Game({
       setShow("winners");
     }
 
+    const handleShowRoundResult = (players : {name : string,roundScore : number}[])=>{
+      setRoundResult(players);
+      setShow("round-result");
+    }
+
     if (skt) {
       skt.on("choose-word", handleChooseWord);
       skt.on("error", handleError);
       skt.on("update-leaderboard",updateLeaderboard);
       skt.on("word-selection",showWordSelection);
       skt.on("start-drawing",handleStartDrawing)
+      skt.on("round-result",handleShowRoundResult);
       skt.on("show-canvas",handleShowCanvas);
       skt.on("winners",handleShowWinners);
     }
@@ -131,9 +144,10 @@ export default function Game({
       skt.off("word-selection",showWordSelection);
       skt.off("start-drawing",handleStartDrawing);
       skt.off("show-canvas",handleShowCanvas);
-      skt.off("winners",handleShowWinners)
+      skt.off("winners",handleShowWinners);
+      skt.off("round-result",handleShowRoundResult);
     };
-  }, [event, name, router]);
+  }, [event, name, router,show]);
 
   if (!socket) {
     return null; // or a loading state
@@ -168,7 +182,7 @@ export default function Game({
 
       <div className="flex flex-1 p-4 gap-4 max-h-[calc(100vh-80px)]">
         <LeaderBoard players={players} />
-        <Outlet show={show} wordChoices={wordChoices} drawerName={drawerName} word={word} wordLength={wordLength} winners={winners} />
+        <Outlet show={show} roundResult={roundResult} wordChoices={wordChoices} drawerName={drawerName} word={word} wordLength={wordLength} winners={winners} />
         <ChatBox messages={messages} />
       </div>
     </div>

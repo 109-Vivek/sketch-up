@@ -118,6 +118,7 @@ export class Room {
       p.isDrawing = false;
       p.guessTimestamp = 0;
       p.roundScore = 0;
+      p.guessed = false;
     });
 
     if (this.currentTurnIndex >= this.players.length - 1) {
@@ -130,6 +131,7 @@ export class Room {
     } else {
       this.currentTurnIndex++;
     }
+    this.startTurn();
   }
 
   startTurn() {
@@ -154,7 +156,7 @@ export class Room {
 
   hasEveryoneGuessed(){
     this.players.forEach((player)=>{
-      if(!player.guessed) return false;
+      if(!player.guessed && player.id !== this.players[this.currentTurnIndex].id ) return false;
     })
     return true;
   }
@@ -179,7 +181,7 @@ export class Room {
     this.pushRoundResults();
     this.sendLeaderBoard();
     this.changeTurn();
-    this.startTurn();
+    
   }
 
   calculateScore() {
@@ -201,7 +203,7 @@ export class Room {
       name: p.name,
       roundScore: p.roundScore,
     }));
-    io.to(this.id).emit("round-result", { players: temp });
+    io.to(this.id).emit("round-result",temp);
   }
 
   pushWinners() {
@@ -232,9 +234,6 @@ export class Room {
   endGame() {
     this.pushWinners();
     this.resetDefaults();
-    clearTimeout(this.wordSelectionTimer!);
-    clearTimeout(this.drawTimer!);
-    this.pushWinners();
   }
 
   sendLeaderBoard() {
